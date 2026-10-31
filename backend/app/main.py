@@ -10,6 +10,7 @@ from backend.app.api.booking_routes import router as booking_router
 from backend.app.api.faculty_routes import router as faculty_router
 from backend.app.api.change_routes import router as change_router
 from backend.app.api.admin_routes import router as admin_router
+from backend.app.api.ai_routes import router as ai_router
 
 
 @asynccontextmanager
@@ -52,6 +53,7 @@ for prefix in ["/api", ""]:
     app.include_router(faculty_router, prefix=prefix)
     app.include_router(change_router, prefix=prefix)
     app.include_router(admin_router, prefix=prefix)
+    app.include_router(ai_router, prefix=prefix)
 
 
 @app.get("/health", tags=["system"])

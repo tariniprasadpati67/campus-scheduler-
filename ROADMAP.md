@@ -74,7 +74,7 @@ Mark [x] when verified with validator.
 - [x] Step 10: FastAPI backend, auth with 4 roles (admin, department
       coordinator, faculty, club), permissions, approval flow, reset-demo
       button for Admin, dataset upload.
-- [ ] Step 11: AI layer: text/Hinglish -> structured booking JSON, user can
+- [x] Step 11: AI layer: text/Hinglish -> structured booking JSON, user can
       edit before submit; code validates; faculty assistant for change
       requests; explanations of decisions. Manual form works without LLM.
 - [x] Step 12: React UI: timetable by group/faculty/room, dashboard

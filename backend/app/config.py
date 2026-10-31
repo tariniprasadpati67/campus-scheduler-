@@ -30,3 +30,10 @@ JWT_EXPIRE_MINUTES = 60 * 24
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 DATA_PATH = PROJECT_ROOT / "data" / "cit_public.json"
 EXPORTS_DIR = PROJECT_ROOT / "exports"
+
+# LLM Configuration (Groq API)
+LLM_API_KEY = os.getenv("LLM_API_KEY")
+raw_llm_model = os.getenv("LLM_MODEL", "qwen/qwen3.8-27b")
+LLM_MODEL = raw_llm_model.replace("LLM_MODEL=", "").strip() if raw_llm_model else "qwen/qwen3.8-27b"
+raw_fallback = os.getenv("LLM_FALLBACK_MODEL", "allam-2-7b")
+LLM_FALLBACK_MODEL = raw_fallback.replace("LLM_FALLBACK_MODEL=", "").strip() if raw_fallback else "allam-2-7b"

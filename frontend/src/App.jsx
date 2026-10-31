@@ -352,6 +352,7 @@ function MainApp() {
           <>
             {activeTab === 'dashboard' && (
               <DashboardTab
+                citData={citData}
                 onNavigateToTimetable={() => setActiveTab('timetable')}
               />
             )}

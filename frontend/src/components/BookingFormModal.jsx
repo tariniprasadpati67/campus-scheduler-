@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../services/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
 const CATEGORIES = [
@@ -9,22 +10,77 @@ const CATEGORIES = [
   { id: 'institute_event', label: 'Institute Event' },
 ];
 
+const SAMPLE_PROMPTS = [
+  'Need a room for 45 people on Tuesday 6 to 8 pm, projector please.',
+  'seminar hall kal shaam 6 baje, 2 ghante, 100 log, mic chahiye',
+  'I want SH-2 on Friday at 10 am for a wheelchair-accessible poster session, 60 people.',
+  'Book the auditorium for the CSE department farewell, Friday evening, around 400 people',
+];
+
 export default function BookingFormModal({ isOpen, onClose, onBookingCreated, rooms = [] }) {
   if (!isOpen) return null;
 
+  const { currentUser } = useAuth();
+
+  // AI Prompt State
+  const [aiText, setAiText] = useState('');
+  const [parsingAi, setParsingAi] = useState(false);
+  const [aiWarnings, setAiWarnings] = useState([]);
+  const [aiFollowUps, setAiFollowUps] = useState([]);
+  const [aiInfo, setAiInfo] = useState(null);
+
+  // Editable Form Fields
   const [title, setTitle] = useState('');
   const [attendance, setAttendance] = useState(80);
   const [duration, setDuration] = useState(2);
-  const [category, setCategory] = useState('club_event');
+  const [category, setCategory] = useState(currentUser?.role === 'admin' ? 'institute_event' : 'club_event');
   const [roomType, setRoomType] = useState('seminar_hall');
   const [requestedRoom, setRequestedRoom] = useState('');
   const [preferredDay, setPreferredDay] = useState('THU');
   const [fromPeriod, setFromPeriod] = useState(10);
-  const [toPeriod, setToPeriod] = useState(12);
+  const [toPeriod, setToPeriod] = useState(11);
+  const [needs, setNeeds] = useState(['projector', 'audio']);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [resultData, setResultData] = useState(null);
+
+  // Handle AI extraction
+  const handleAiExtract = async () => {
+    if (!aiText.trim()) return;
+    setParsingAi(true);
+    setErrorMessage(null);
+    setAiWarnings([]);
+    setAiFollowUps([]);
+
+    try {
+      const res = await api.ai.parseBooking(aiText.trim(), currentUser?.role || 'club');
+      const struct = res.structured || {};
+
+      if (struct.title) setTitle(struct.title);
+      if (struct.attendance) setAttendance(struct.attendance);
+      if (struct.duration_periods) setDuration(struct.duration_periods);
+      if (struct.requested_category) setCategory(struct.requested_category);
+      if (struct.room_types && struct.room_types.length > 0) setRoomType(struct.room_types[0]);
+      if (struct.requested_room) setRequestedRoom(struct.requested_room);
+      if (struct.needs) setNeeds(struct.needs);
+
+      if (struct.windows && struct.windows.length > 0) {
+        setPreferredDay(struct.windows[0].day);
+        setFromPeriod(struct.windows[0].from_period);
+        setToPeriod(struct.windows[0].to_period);
+      }
+
+      setAiWarnings(res.warnings || []);
+      setAiFollowUps(res.follow_ups || []);
+      setAiInfo({ engine: res.engine_used, model: res.model });
+    } catch (err) {
+      console.warn('AI Parsing error, fallback to manual form:', err);
+      setErrorMessage(`AI Extraction: ${err.message}. You can still fill the form manually.`);
+    } finally {
+      setParsingAi(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,9 +102,9 @@ export default function BookingFormModal({ isOpen, onClose, onBookingCreated, ro
       ],
       room_types: [roomType],
       requested_room: requestedRoom || null,
-      needs: ['projector', 'audio'],
+      needs: needs,
       mandatory_for_groups: [],
-      raw_text: `Manual form booking for ${title}`,
+      raw_text: aiText || `Manual form booking for ${title}`,
     };
 
     try {
@@ -67,7 +123,7 @@ export default function BookingFormModal({ isOpen, onClose, onBookingCreated, ro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
           <div className="flex items-center gap-2.5">
             <span className="text-2xl">🎪</span>
@@ -76,7 +132,7 @@ export default function BookingFormModal({ isOpen, onClose, onBookingCreated, ro
                 Request Venue Booking
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Spectra Fest & Event venue allocation engine
+                Natural Language / Hinglish AI Assistant & Manual Submission Form
               </p>
             </div>
           </div>
@@ -87,6 +143,94 @@ export default function BookingFormModal({ isOpen, onClose, onBookingCreated, ro
             ✕
           </button>
         </div>
+
+        {/* AI Natural Language Assistant Box */}
+        <div className="bg-gradient-to-r from-indigo-50/80 to-purple-50/80 dark:from-indigo-950/40 dark:to-purple-950/40 p-4 rounded-xl border border-indigo-200/80 dark:border-indigo-800/80 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+              <span>✨</span>
+              <span>AI Assistant (English or Hinglish)</span>
+            </span>
+            {aiInfo && (
+              <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono">
+                {aiInfo.model}
+              </span>
+            )}
+          </div>
+
+          <textarea
+            rows={2}
+            value={aiText}
+            onChange={(e) => setAiText(e.target.value)}
+            placeholder="Type in English or Hinglish: e.g. 'seminar hall kal shaam 6 baje, 2 ghante, 100 log, mic chahiye'"
+            className="w-full p-2.5 text-xs rounded-xl border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+
+          {/* Sample quick prompts */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] text-slate-500">Quick Samples:</span>
+            {SAMPLE_PROMPTS.map((sample, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setAiText(sample)}
+                className="text-[10px] bg-white dark:bg-slate-800 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-800 truncate max-w-[200px]"
+              >
+                {sample}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleAiExtract}
+              disabled={parsingAi || !aiText.trim()}
+              className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {parsingAi ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Extracting...</span>
+                </>
+              ) : (
+                <>
+                  <span>✨</span>
+                  <span>Extract to Form</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* AI Warnings & Follow-ups */}
+        {aiWarnings.length > 0 && (
+          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs space-y-1">
+            <div className="font-bold flex items-center gap-1">
+              <span>⚠️</span>
+              <span>AI Validation & Conflict Adjustments:</span>
+            </div>
+            {aiWarnings.map((w, i) => (
+              <p key={i} className="text-[11px] leading-relaxed">
+                • {w}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {aiFollowUps.length > 0 && (
+          <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-xs space-y-1">
+            <div className="font-bold flex items-center gap-1">
+              <span>💡</span>
+              <span>Follow-up Clarification:</span>
+            </div>
+            {aiFollowUps.map((f, i) => (
+              <p key={i} className="text-[11px]">
+                • {f}
+              </p>
+            ))}
+          </div>
+        )}
 
         {errorMessage && (
           <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2">
@@ -143,7 +287,13 @@ export default function BookingFormModal({ isOpen, onClose, onBookingCreated, ro
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+          <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+            <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
+              <p className="font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Editable Structured Booking Fields (Review before submitting):
+              </p>
+            </div>
+
             <div>
               <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Event Title
@@ -305,7 +455,7 @@ export default function BookingFormModal({ isOpen, onClose, onBookingCreated, ro
                 disabled={submitting}
                 className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow transition disabled:opacity-50 flex items-center gap-2"
               >
-                {submitting ? 'Allocating...' : 'Submit Request'}
+                {submitting ? 'Allocating with Engine...' : 'Confirm & Submit Request'}
               </button>
             </div>
           </form>

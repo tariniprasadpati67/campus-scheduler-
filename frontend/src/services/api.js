@@ -139,4 +139,24 @@ export const api = {
     getAuditLogs: (limit = 100) => request(`/admin/audit-logs?limit=${limit}`),
     exportSchedule: () => request('/schedule/export'),
   },
+
+  // AI Scheduling & Parsing Assistant (Step 11)
+  ai: {
+    parseBooking: (text, user_role) =>
+      request('/ai/parse-booking', {
+        method: 'POST',
+        body: JSON.stringify({ text, user_role }),
+      }),
+    parseChange: (text, faculty_id) =>
+      request('/ai/parse-change', {
+        method: 'POST',
+        body: JSON.stringify({ text, faculty_id }),
+      }),
+    explainDecision: (decision_type, data) =>
+      request('/ai/explain-decision', {
+        method: 'POST',
+        body: JSON.stringify({ decision_type, data }),
+      }),
+  },
 };
+

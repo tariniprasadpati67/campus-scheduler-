@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import ProposeChangeModal from './ProposeChangeModal.jsx';
 
-export default function DashboardTab({ onNavigateToTimetable }) {
+export default function DashboardTab({ onNavigateToTimetable, citData }) {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
@@ -10,6 +11,7 @@ export default function DashboardTab({ onNavigateToTimetable }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [isProposeModalOpen, setIsProposeModalOpen] = useState(false);
 
   // Data states
   const [conflictsData, setConflictsData] = useState(null);
@@ -137,7 +139,14 @@ export default function DashboardTab({ onNavigateToTimetable }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsProposeModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition"
+          >
+            <span>➕</span>
+            <span>Propose Change</span>
+          </button>
           <button
             onClick={() => fetchDashboardData(true)}
             disabled={refreshing}
@@ -647,6 +656,19 @@ export default function DashboardTab({ onNavigateToTimetable }) {
           </div>
         </div>
       )}
+
+      {/* Propose Schedule Change Modal */}
+      {isProposeModalOpen && (
+        <ProposeChangeModal
+          isOpen={isProposeModalOpen}
+          onClose={() => setIsProposeModalOpen(false)}
+          citData={citData}
+          onProposalCreated={() => {
+            fetchDashboardData(true);
+          }}
+        />
+      )}
     </div>
   );
 }
+
