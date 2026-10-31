@@ -10,6 +10,7 @@ This document tracks all third-party libraries and tools used across the CIT Cam
 - **PyJWT**: JSON Web Token implementation for authentication and role verification
 - **passlib**: Password hashing framework supporting bcrypt
 - **bcrypt**: Modern password hashing library
+- **groq**: Official Python SDK for the Groq Cloud API
 - **ortools (Google OR-Tools)**: CP-SAT constraint programming solver
 - **httpx**: Fully featured HTTP client library for FastAPI testing
 - **python-multipart**: Streaming multipart parser for file and form data
