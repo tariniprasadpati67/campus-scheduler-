@@ -4,3 +4,8 @@ uvicorn
 psycopg2-binary
 sqlalchemy
 python-dotenv
+pyjwt
+httpx
+python-multipart
+passlib
+bcrypt

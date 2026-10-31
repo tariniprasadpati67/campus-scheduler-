@@ -1,5 +1,4 @@
 import json
-import uuid
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,7 +6,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.config import DATA_PATH
-from backend.app.database import get_db, BookingRequestModel, TimetableEntry, AuditLog, User
+from backend.app.database import (
+    get_db,
+    BookingRequestModel,
+    TimetableEntry,
+    AuditLog,
+    User,
+)
 from backend.app.auth import get_current_user, require_roles
 from app.models import load_dataset
 from app.booking_engine import allocate_bookings
@@ -32,7 +37,7 @@ class BookingCreateInput(BaseModel):
     title: str
     attendance: int
     duration_periods: int
-    requested_category: str = Field(..., description="club_event, department_event, guest_lecture, institute_event")
+    requested_category: str = Field(..., description="club_event | department_event | guest_lecture | institute_event")
     windows: List[WindowInput]
     room_types: List[str] = Field(default_factory=lambda: ["classroom"])
     needs: List[str] = Field(default_factory=list)
@@ -44,37 +49,35 @@ class BookingCreateInput(BaseModel):
 @router.get("")
 def list_bookings(
     status_filter: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List all booking requests and their current allocation status/reasons."""
+    """List booking requests with role-based visibility (club sees own, admin/coordinator sees all)."""
     query = db.query(BookingRequestModel)
+
+    if current_user.role == "club":
+        query = query.filter(BookingRequestModel.requester_id == current_user.id)
     if status_filter:
         query = query.filter(BookingRequestModel.status == status_filter)
-    
+
     bookings = query.order_by(BookingRequestModel.id.asc()).all()
     results = []
     for b in bookings:
+        structured = json.loads(b.structured_json) if b.structured_json else {}
         results.append({
             "id": b.id,
-            "request_id": b.request_id,
-            "title": b.title,
-            "requester": b.requester,
-            "role": b.role,
-            "requested_category": b.requested_category,
-            "attendance": b.attendance,
-            "duration_periods": b.duration_periods,
-            "windows": json.loads(b.windows_json) if b.windows_json else [],
-            "room_types": json.loads(b.room_types_json) if b.room_types_json else [],
-            "needs": json.loads(b.needs_json) if b.needs_json else [],
-            "requested_room": b.requested_room,
-            "mandatory_for_groups": json.loads(b.mandatory_groups_json) if b.mandatory_groups_json else [],
+            "requester_id": b.requester_id,
+            "title": structured.get("title", b.original_text or f"Booking #{b.id}"),
+            "category": b.category,
             "status": b.status,
             "assigned_day": b.assigned_day,
             "assigned_start": b.assigned_start,
             "assigned_end": b.assigned_end,
             "assigned_room": b.assigned_room,
             "reason": b.reason,
+            "decided_by": b.decided_by,
             "created_at": b.created_at.isoformat() if b.created_at else None,
+            "structured": structured,
         })
     return {"total": len(results), "bookings": results}
 
@@ -87,18 +90,19 @@ def create_booking(
 ):
     """
     Create a new booking request.
-    The booking engine evaluates constraints, priorities, and rooms to decide status and reason.
+    The booking engine immediately evaluates constraints, priorities, and rooms to decide status and reason.
     """
     dataset = load_dataset(DATA_PATH)
     entries = db.query(TimetableEntry).all()
     timetable_map = {e.session_id: (e.day, e.start_period, e.room_id) for e in entries}
 
-    req_id = f"REQ_{uuid.uuid4().hex[:6].upper()}"
     windows_dicts = [w.to_dict() for w in req.windows]
+    req_id = f"REQ_U{current_user.id}_{datetime.utcnow().strftime('%H%M%S')}"
+
     new_req_dict = {
         "id": req_id,
         "submitted_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
-        "requester": current_user.username,
+        "requester": current_user.name or current_user.email,
         "role": current_user.role,
         "department": current_user.department,
         "requested_category": req.requested_category,
@@ -111,22 +115,18 @@ def create_booking(
         "requested_room": req.requested_room,
         "mandatory_for_groups": req.mandatory_for_groups,
         "series_id": None,
-        "raw_text": req.raw_text,
+        "raw_text": req.raw_text or req.title,
     }
 
-    # Add to dataset requests and evaluate
+    # Evaluate with booking engine
     dataset.booking_requests.append(new_req_dict)
     fest_result = allocate_bookings(dataset, timetable_map)
 
-    # Locate decision for this request
     dec = next((b for b in fest_result.get("bookings", []) if b["request_id"] == req_id), None)
     if not dec:
         dec_status = "rejected"
         dec_reason = "No matching venue or time window found that satisfies constraints"
-        assigned_day = None
-        assigned_start = None
-        assigned_end = None
-        assigned_room = None
+        assigned_day, assigned_start, assigned_end, assigned_room = None, None, None, None
     else:
         dec_status = dec.get("status", "rejected")
         dec_reason = dec.get("reason", "Allocated by booking engine")
@@ -135,46 +135,35 @@ def create_booking(
         assigned_end = dec.get("end_period")
         assigned_room = dec.get("room_id")
 
-    # Persist in DB
     model = BookingRequestModel(
-        request_id=req_id,
-        user_id=current_user.id,
-        requester=current_user.username,
-        role=current_user.role,
-        requested_category=req.requested_category,
-        title=req.title,
-        attendance=req.attendance,
-        duration_periods=req.duration_periods,
-        windows_json=json.dumps(windows_dicts),
-        room_types_json=json.dumps(req.room_types),
-        needs_json=json.dumps(req.needs),
-        requested_room=req.requested_room,
-        mandatory_groups_json=json.dumps(req.mandatory_for_groups),
+        requester_id=current_user.id,
+        original_text=req.raw_text or req.title,
+        structured_json=json.dumps(new_req_dict),
+        category=req.requested_category,
         status=dec_status,
+        reason=dec_reason,
         assigned_day=assigned_day,
         assigned_start=assigned_start,
         assigned_end=assigned_end,
         assigned_room=assigned_room,
-        reason=dec_reason,
-        raw_text=req.raw_text,
+        decided_by=None,
     )
     db.add(model)
+    db.flush()
 
     audit = AuditLog(
+        actor=current_user.email,
         action="CREATE_BOOKING",
-        entity_type="booking_request",
-        entity_id=req_id,
-        actor_id=current_user.id,
-        actor_role=current_user.role,
-        reason=f"Booking {req_id} ({req.title}) evaluated: status={dec_status}, room={assigned_room}, day={assigned_day}. Reason: {dec_reason}",
+        detail=f"Booking #{model.id} ({req.title})",
+        reason=f"Booking #{model.id} evaluated: status={dec_status}, room={assigned_room}, day={assigned_day}. Reason: {dec_reason}",
     )
     db.add(audit)
     db.commit()
     db.refresh(model)
 
     return {
-        "request_id": model.request_id,
-        "title": model.title,
+        "id": model.id,
+        "title": req.title,
         "status": model.status,
         "assigned_day": model.assigned_day,
         "assigned_start": model.assigned_start,
@@ -184,40 +173,38 @@ def create_booking(
     }
 
 
-@router.post("/{request_id}/cancel")
+@router.post("/{booking_id}/cancel")
 def cancel_booking(
-    request_id: str,
+    booking_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Cancel a booking request. Students/clubs may only cancel their own requests."""
-    b = db.query(BookingRequestModel).filter(BookingRequestModel.request_id == request_id).first()
+    """Cancel own booking request (club can only cancel own; admin can cancel any)."""
+    b = db.query(BookingRequestModel).filter(BookingRequestModel.id == booking_id).first()
     if not b:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking request not found.")
 
-    if current_user.role == "club" and b.user_id != current_user.id and b.requester != current_user.username:
+    if current_user.role == "club" and b.requester_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: You cannot cancel another user's booking request."
+            detail="Forbidden: You can only cancel your own booking requests.",
         )
 
     old_status = b.status
     b.status = "cancelled"
-    b.reason = f"Cancelled by {current_user.username} ({current_user.role})"
+    b.reason = f"Cancelled by {current_user.email} ({current_user.role})"
     b.assigned_day = None
     b.assigned_start = None
     b.assigned_end = None
     b.assigned_room = None
 
     audit = AuditLog(
+        actor=current_user.email,
         action="CANCEL_BOOKING",
-        entity_type="booking_request",
-        entity_id=request_id,
-        actor_id=current_user.id,
-        actor_role=current_user.role,
-        reason=f"Booking {request_id} cancelled by {current_user.username} (was {old_status}).",
+        detail=f"Booking #{booking_id}",
+        reason=f"Booking #{booking_id} cancelled by {current_user.email} (was {old_status}).",
     )
     db.add(audit)
     db.commit()
 
-    return {"status": "success", "message": f"Booking {request_id} has been cancelled."}
+    return {"status": "success", "message": f"Booking #{booking_id} has been cancelled."}

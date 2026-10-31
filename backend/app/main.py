@@ -14,14 +14,14 @@ from backend.app.api.admin_routes import router as admin_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize DB tables and demo seed on startup
+    # Initialize PostgreSQL tables and demo seed on startup
     init_database()
     yield
 
 
 app = FastAPI(
     title="CIT Timetabling & Venue Booking API",
-    description="Automated scheduling, venue allocation, disruptions rescheduling, and conflict resolution API.",
+    description="Automated scheduling, venue allocation, disruption rescheduling, and conflict resolution API.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -44,21 +44,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register API routers
-app.include_router(auth_router, prefix="/api")
-app.include_router(timetable_router, prefix="/api")
-app.include_router(booking_router, prefix="/api")
-app.include_router(faculty_router, prefix="/api")
-app.include_router(change_router, prefix="/api")
-app.include_router(admin_router, prefix="/api")
+# Register routes with both /api prefix and root prefix for maximum compatibility
+for prefix in ["/api", ""]:
+    app.include_router(auth_router, prefix=prefix)
+    app.include_router(timetable_router, prefix=prefix)
+    app.include_router(booking_router, prefix=prefix)
+    app.include_router(faculty_router, prefix=prefix)
+    app.include_router(change_router, prefix=prefix)
+    app.include_router(admin_router, prefix=prefix)
 
 
+@app.get("/health", tags=["system"])
 @app.get("/api/health", tags=["system"])
 def health_check():
-    return {"status": "ok", "system": "CIT Timetabling Backend", "version": "1.0.0"}
+    return {"status": "ok", "system": "CIT Timetabling Backend (PostgreSQL)", "version": "1.0.0"}
 
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.app.main:app", host="0.0.0.0", port=8000, reload=True)
-

@@ -140,7 +140,7 @@ def get_current_conflicts(db: Session = Depends(get_db)):
 @router.post("/manual-schedule")
 def manual_schedule(
     req: ManualScheduleRequest,
-    current_user: User = Depends(require_roles(["admin", "department_coordinator"])),
+    current_user: User = Depends(require_roles(["admin", "coordinator"])),
     db: Session = Depends(get_db),
 ):
     """
@@ -182,7 +182,6 @@ def manual_schedule(
         violations.append({"rule": "H1", "where": "timetable", "detail": f"Session {d} appears more than once"})
 
     if violations:
-        # Format violation reasons clearly
         reasons = [f"[{v.get('rule', 'VIOLATION')}]: {v.get('detail', v.get('message', ''))}" for v in violations]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -197,13 +196,10 @@ def manual_schedule(
     target.start_period = req.start_period
     target.room_id = req.room_id
 
-    # Record in audit log
     audit = AuditLog(
+        actor=current_user.email,
         action="MANUAL_RESCHEDULE",
-        entity_type="timetable_session",
-        entity_id=req.session_id,
-        actor_id=current_user.id,
-        actor_role=current_user.role,
+        detail=req.session_id,
         reason=f"Moved session {req.session_id} from {old_loc} to {new_loc}. Justification: {req.reason}",
     )
     db.add(audit)

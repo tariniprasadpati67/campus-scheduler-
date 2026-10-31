@@ -172,17 +172,18 @@ If you think the validator is wrong, tell the organisers during the hackathon.
 To start the FastAPI backend server:
 ```powershell
 python -m uvicorn backend.app.main:app --port 8000 --reload
+# or: cd backend; uvicorn app.api.main:app --reload
 ```
 Interactive Swagger API documentation: `http://localhost:8000/docs`
 
 ### Demo Logins
 
-| Role | Username | Password | Notes |
+| Role | Email | Password | Permissions & Scope |
 | --- | --- | --- | --- |
-| Admin | `admin` | `admin123` | Full administrative privileges, approve/reject changes, dataset upload |
-| Department Coordinator | `coordinator` | `coord123` | Department CSE coordinator, propose changes, manual schedule |
-| Faculty Member | `faculty` | `faculty123` | Mark unavailability, propose leaves/changes |
-| Club Representative | `club` | `club123` | Submit and manage Spectra festival venue bookings |
+| Admin | `admin@cit.test` | `admin123` | Full administrative privileges, approve/reject changes, dataset upload, reset demo |
+| Coordinator | `coordinator@cit.test` | `coord123` | Department CSE coordinator: request changes and book rooms for own department |
+| Faculty Member | `faculty@cit.test` | `faculty123` | View own timetable, mark unavailability, request extra or moved sessions |
+| Club Representative | `club@cit.test` | `club123` | Submit and cancel own Spectra festival venue requests |
 
 ## What goes in your exports/ folder
 

@@ -8,18 +8,14 @@ from sqlalchemy.orm import Session
 from backend.app.config import DATA_PATH, EXPORTS_DIR
 from backend.app.database import (
     get_db,
-    Base,
-    engine,
     TimetableEntry,
     BookingRequestModel,
     ChangeRequestModel,
     AuditLog,
     User,
 )
-from backend.app.auth import require_roles
+from backend.app.auth import require_roles, get_current_user
 from backend.app.init_db import init_database
-from app.models import load_dataset
-from app.booking_engine import allocate_bookings
 
 router = APIRouter(tags=["admin"])
 
@@ -32,7 +28,7 @@ class DatasetUploadInput(BaseModel):
 @router.get("/schedule/export")
 def export_schedule(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["admin", "department_coordinator", "faculty", "club"])),
+    current_user: User = Depends(get_current_user),
 ):
     """Export complete schedule.json structure conforming to the official Crunch Week schema."""
     entries = db.query(TimetableEntry).order_by(TimetableEntry.session_id.asc()).all()
@@ -41,7 +37,6 @@ def export_schedule(
         for e in entries
     ]
 
-    # Load midsem exams from baseline export if available
     baseline_export_path = EXPORTS_DIR / "schedule.json"
     midsem_exams = []
     if baseline_export_path.exists():
@@ -49,7 +44,6 @@ def export_schedule(
             base_data = json.load(f)
         midsem_exams = base_data.get("midsem_exams", [])
 
-    # Load fest bookings from database
     approved_bookings = (
         db.query(BookingRequestModel)
         .filter(BookingRequestModel.status.in_(["approved", "alternative_offered"]))
@@ -58,24 +52,25 @@ def export_schedule(
     fest_week = []
     for b in approved_bookings:
         if b.assigned_day and b.assigned_start and b.assigned_room:
+            structured = json.loads(b.structured_json) if b.structured_json else {}
+            duration = structured.get("duration_periods", 1)
+            end_p = b.assigned_end or (b.assigned_start + duration - 1)
+            req_id = structured.get("id") or f"REQ_{b.id}"
             fest_week.append({
-                "request_id": b.request_id,
+                "request_id": req_id,
                 "assigned_day": b.assigned_day,
                 "assigned_start_period": b.assigned_start,
-                "assigned_end_period": b.assigned_end or (b.assigned_start + b.duration_periods - 1),
+                "assigned_end_period": end_p,
                 "assigned_room_id": b.assigned_room,
                 "status": b.status,
                 "reason": b.reason,
             })
 
-    # Log export
     audit = AuditLog(
+        actor=current_user.email,
         action="EXPORT_SCHEDULE",
-        entity_type="schedule",
-        entity_id="schedule.json",
-        actor_id=current_user.id,
-        actor_role=current_user.role,
-        reason=f"Schedule exported by {current_user.username}",
+        detail="schedule.json",
+        reason=f"Schedule exported by {current_user.email}",
     )
     db.add(audit)
     db.commit()
@@ -87,28 +82,26 @@ def export_schedule(
     }
 
 
+@router.post("/admin/reset-demo")
 @router.post("/admin/reset-demo-data")
 def reset_demo_data(
     current_user: User = Depends(require_roles(["admin"])),
     db: Session = Depends(get_db),
 ):
     """Reset all tables and reload baseline demo dataset and schedule."""
-    # Wipe entries
+    db.query(AuditLog).delete()
     db.query(ChangeRequestModel).delete()
     db.query(BookingRequestModel).delete()
     db.query(TimetableEntry).delete()
     db.commit()
 
-    # Re-initialize
     init_database()
 
     audit = AuditLog(
+        actor=current_user.email,
         action="RESET_DEMO_DATA",
-        entity_type="system",
-        entity_id="all",
-        actor_id=current_user.id,
-        actor_role=current_user.role,
-        reason=f"Demo database reset triggered by {current_user.username}",
+        detail="All PostgreSQL tables reset",
+        reason=f"Demo database reset triggered by {current_user.email}",
     )
     db.add(audit)
     db.commit()
@@ -131,16 +124,13 @@ def upload_dataset(
             detail=f"Uploaded dataset missing required top-level keys: {sorted(missing)}",
         )
 
-    # Save backup of current dataset
     backup_path = DATA_PATH.with_suffix(".backup.json")
     if DATA_PATH.exists():
         shutil.copy2(DATA_PATH, backup_path)
 
-    # Write new dataset
     with open(DATA_PATH, "w", encoding="utf-8") as f:
         json.dump(req.data, f, indent=2)
 
-    # Reset and regenerate
     db.query(ChangeRequestModel).delete()
     db.query(BookingRequestModel).delete()
     db.query(TimetableEntry).delete()
@@ -149,12 +139,10 @@ def upload_dataset(
     init_database()
 
     audit = AuditLog(
+        actor=current_user.email,
         action="UPLOAD_DATASET",
-        entity_type="dataset",
-        entity_id=DATA_PATH.name,
-        actor_id=current_user.id,
-        actor_role=current_user.role,
-        reason=f"New dataset uploaded by {current_user.username}. Justification: {req.reason}",
+        detail=DATA_PATH.name,
+        reason=f"New dataset uploaded by {current_user.email}. Justification: {req.reason}",
     )
     db.add(audit)
     db.commit()
@@ -183,15 +171,12 @@ def get_audit_logs(
     results = [
         {
             "id": l.id,
+            "actor": l.actor,
             "action": l.action,
-            "entity_type": l.entity_type,
-            "entity_id": l.entity_id,
-            "actor_id": l.actor_id,
-            "actor_role": l.actor_role,
+            "detail": l.detail,
             "reason": l.reason,
-            "timestamp": l.timestamp.isoformat() if l.timestamp else None,
+            "created_at": l.created_at.isoformat() if l.created_at else None,
         }
         for l in logs
     ]
     return {"total": len(results), "audit_logs": results}
-

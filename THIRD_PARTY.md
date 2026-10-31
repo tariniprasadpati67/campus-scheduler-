@@ -8,6 +8,8 @@ This document tracks all third-party libraries and tools used across the CIT Cam
 - **SQLAlchemy**: SQL toolkit and Object Relational Mapper (ORM)
 - **python-dotenv**: Loads environment variables from `.env`
 - **PyJWT**: JSON Web Token implementation for authentication and role verification
+- **passlib**: Password hashing framework supporting bcrypt
+- **bcrypt**: Modern password hashing library
 - **ortools (Google OR-Tools)**: CP-SAT constraint programming solver
 - **httpx**: Fully featured HTTP client library for FastAPI testing
 - **python-multipart**: Streaming multipart parser for file and form data
