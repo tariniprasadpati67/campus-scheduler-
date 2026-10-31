@@ -59,7 +59,7 @@ Mark [x] when verified with validator.
 - [x] Step 3: CP-SAT timetable, hard constraints only.
       Verify: validator shows 0 hard violations for sessions.
 - [x] Step 4: add soft penalties to the objective, lower S1-S6 total.
-- [ ] Step 5: midsem exam scheduler (41 exams, half room capacity, an exam
+- [x] Step 5: midsem exam scheduler (41 exams, half room capacity, an exam
       may use several rooms, slots AM/PM Mon-Sat). Verify: 0 E violations.
 - [ ] Step 6: export exports/schedule.json via the app (generated, never edited).
 - [ ] Step 7: booking engine for Spectra week: priority rules, role caps,
