@@ -1,16 +1,27 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load .env from project root
+# Load repo-root .env using explicit path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 env_path = PROJECT_ROOT / ".env"
-if env_path.exists():
-    load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL or not DATABASE_URL.strip():
-    DATABASE_URL = f"sqlite:///{PROJECT_ROOT / 'cit.db'}"
+raw_db_url = os.getenv("DATABASE_URL")
+if not raw_db_url or not raw_db_url.strip():
+    sys.exit("ERROR: DATABASE_URL is missing. A PostgreSQL connection string starting with 'postgresql' is required in repo-root .env.")
+
+raw_db_url = raw_db_url.strip()
+if raw_db_url.startswith("postgres://"):
+    DATABASE_URL = "postgresql://" + raw_db_url[len("postgres://"):]
+elif raw_db_url.startswith("postgresql"):
+    DATABASE_URL = raw_db_url
+else:
+    sys.exit("ERROR: DATABASE_URL must start with 'postgresql'. A valid PostgreSQL connection string is required.")
+
+# At startup print ONLY "Using PostgreSQL", never the URL or password
+print("Using PostgreSQL")
 
 JWT_SECRET = os.getenv("JWT_SECRET", "cit-super-secret-jwt-key-2027-crunch-week-production-grade-32bytes-plus")
 JWT_ALGORITHM = "HS256"

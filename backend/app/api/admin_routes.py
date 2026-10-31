@@ -194,3 +194,4 @@ def get_audit_logs(
         for l in logs
     ]
     return {"total": len(results), "audit_logs": results}
+

@@ -56,3 +56,4 @@ VERIFY
 Never edit validator.py or run_all.py.
 
 Reply in 5 lines: the command to start the server and the 4 demo logins.
+

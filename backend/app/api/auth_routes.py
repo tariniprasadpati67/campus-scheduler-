@@ -65,3 +65,4 @@ def get_me(current_user: User = Depends(get_current_user)):
         "role": current_user.role,
         "department": current_user.department,
     }
+

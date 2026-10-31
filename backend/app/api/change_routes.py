@@ -275,3 +275,4 @@ def reject_change(
         "change_id": change.id,
         "message": f"Change #{change.id} has been rejected.",
     }
+

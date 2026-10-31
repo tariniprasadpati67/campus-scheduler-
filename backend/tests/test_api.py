@@ -1,15 +1,41 @@
-import json
+import os
+import sys
 import unittest
-from fastapi.testclient import TestClient
+from pathlib import Path
+from dotenv import load_dotenv
 
-from backend.app.main import app
-from backend.app.init_db import init_database
-from backend.app.database import SessionLocal, TimetableEntry, User
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+env_path = PROJECT_ROOT / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+
+db_url = os.getenv("DATABASE_URL", "").strip()
+HAS_POSTGRES = bool(db_url and (db_url.startswith("postgresql://") or db_url.startswith("postgresql+")))
 
 
 class TestFastAPIBackend(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        if not HAS_POSTGRES:
+            raise unittest.SkipTest("DATABASE_URL with postgresql is not configured in .env. Skipping live database tests.")
+
+        try:
+            from sqlalchemy import create_engine, text
+            engine = create_engine(db_url, pool_pre_ping=True)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        except Exception as exc:
+            raise unittest.SkipTest(f"PostgreSQL database is currently unreachable: {exc}")
+
+        from backend.app.main import app
+        from backend.app.init_db import init_database
+        from backend.app.database import SessionLocal, TimetableEntry, User
+        from fastapi.testclient import TestClient
+
+        cls.app = app
+        cls.SessionLocal = SessionLocal
+        cls.TimetableEntry = TimetableEntry
+        cls.User = User
         init_database()
         cls.client = TestClient(app)
 
@@ -30,7 +56,6 @@ class TestFastAPIBackend(unittest.TestCase):
         ]
         for uname, pwd, expected_role in roles_creds:
             token = self._login(uname, pwd)
-            # Who am I test
             me_resp = self.client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
             self.assertEqual(me_resp.status_code, 200)
             me_data = me_resp.json()
@@ -50,7 +75,6 @@ class TestFastAPIBackend(unittest.TestCase):
         self.assertEqual(resp.status_code, 403, "Club should be blocked from viewing admin audit logs")
 
         # 2. Nobody can approve their own request
-        # Admin proposes a change
         prop_resp = self.client.post(
             "/api/changes/propose",
             headers={"Authorization": f"Bearer {admin_token}"},
@@ -81,9 +105,9 @@ class TestFastAPIBackend(unittest.TestCase):
         """Verify that a manual schedule violating hard constraints is rejected with a clear reason."""
         admin_token = self._login("admin", "admin123")
 
-        db = SessionLocal()
+        db = self.SessionLocal()
         try:
-            entry = db.query(TimetableEntry).first()
+            entry = db.query(self.TimetableEntry).first()
             self.assertIsNotNone(entry, "Expected at least one session in DB timetable")
             target_sid = entry.session_id
         finally:
@@ -137,7 +161,7 @@ class TestFastAPIBackend(unittest.TestCase):
             "attendance": 50,
             "duration_periods": 2,
             "requested_category": "club_event",
-            "windows": [{"day": "THU", "start_period": 10, "end_period": 13}],
+            "windows": [{"day": "THU", "from_period": 10, "to_period": 12}],
             "room_types": ["seminar_hall", "auditorium"],
             "needs": ["projector"],
         }
