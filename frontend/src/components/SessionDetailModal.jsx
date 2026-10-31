@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function SessionDetailModal({ session, onClose }) {
+export default function SessionDetailModal({ session, onClose, onReschedule }) {
   if (!session) return null;
 
   const kindBadgeColors = {
@@ -88,10 +88,22 @@ export default function SessionDetailModal({ session, onClose }) {
           </div>
         </div>
 
-        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 text-right">
+        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          {onReschedule ? (
+            <button
+              onClick={() => {
+                onClose();
+                onReschedule(session);
+              }}
+              className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow transition flex items-center gap-1.5"
+            >
+              <span>🔧</span>
+              <span>Reschedule Session</span>
+            </button>
+          ) : <div />}
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-sm font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-lg transition"
+            className="px-4 py-1.5 text-xs font-medium bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-lg transition"
           >
             Close
           </button>

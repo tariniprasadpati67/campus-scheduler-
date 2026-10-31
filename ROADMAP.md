@@ -77,7 +77,7 @@ Mark [x] when verified with validator.
 - [ ] Step 11: AI layer: text/Hinglish -> structured booking JSON, user can
       edit before submit; code validates; faculty assistant for change
       requests; explanations of decisions. Manual form works without LLM.
-- [ ] Step 12: React UI: timetable by group/faculty/room, dashboard
+- [x] Step 12: React UI: timetable by group/faculty/room, dashboard
       (pending approvals, conflicts, room utilisation), manual scheduling
       that enforces hard constraints, loading/empty/error states, mobile.
 - [ ] Step 13: deploy, demo accounts, README (architecture diagram, setup,
