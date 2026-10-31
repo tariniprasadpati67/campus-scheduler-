@@ -71,7 +71,7 @@ Mark [x] when verified with validator.
       approval, explain conflicting constraints if infeasible.
       Verify: validator --disruption --baseline.
 - [x] Step 9: export exports/schedule_after.json via the app.
-- [ ] Step 10: FastAPI backend, auth with 4 roles (admin, department
+- [x] Step 10: FastAPI backend, auth with 4 roles (admin, department
       coordinator, faculty, club), permissions, approval flow, reset-demo
       button for Admin, dataset upload.
 - [ ] Step 11: AI layer: text/Hinglish -> structured booking JSON, user can

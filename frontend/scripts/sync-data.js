@@ -29,3 +29,4 @@ for (const { src, dest } of filesToCopy) {
     console.warn(`Warning: Source file not found: ${src}`);
   }
 }
+

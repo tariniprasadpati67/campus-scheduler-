@@ -100,3 +100,4 @@ export default function SessionDetailModal({ session, onClose }) {
     </div>
   );
 }
+

@@ -167,6 +167,23 @@ Changes are permanent: they hold for every week after they're applied.
 
 If you think the validator is wrong, tell the organisers during the hackathon.
 
+## Demo Accounts & Fast API Server
+
+To start the FastAPI backend server:
+```powershell
+python -m uvicorn backend.app.main:app --port 8000 --reload
+```
+Interactive Swagger API documentation: `http://localhost:8000/docs`
+
+### Demo Logins
+
+| Role | Username | Password | Notes |
+| --- | --- | --- | --- |
+| Admin | `admin` | `admin123` | Full administrative privileges, approve/reject changes, dataset upload |
+| Department Coordinator | `coordinator` | `coord123` | Department CSE coordinator, propose changes, manual schedule |
+| Faculty Member | `faculty` | `faculty123` | Mark unavailability, propose leaves/changes |
+| Club Representative | `club` | `club123` | Submit and manage Spectra festival venue bookings |
+
 ## What goes in your exports/ folder
 
 Commit both of these to your repo before the deadline:

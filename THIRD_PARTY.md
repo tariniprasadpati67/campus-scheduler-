@@ -2,12 +2,16 @@
 
 This document tracks all third-party libraries and tools used across the CIT Campus Scheduling Platform as required by Working Rule 7.
 
-## Backend Core Stack
-- **FastAPI**: Backend REST API framework
-- **Uvicorn**: ASGI server for FastAPI
+## Backend Stack
+- **FastAPI**: Modern, fast web framework for building APIs with Python
+- **Uvicorn**: Lightning-fast ASGI server implementation
+- **SQLAlchemy**: SQL toolkit and Object Relational Mapper (ORM)
+- **python-dotenv**: Loads environment variables from `.env`
+- **PyJWT**: JSON Web Token implementation for authentication and role verification
 - **ortools (Google OR-Tools)**: CP-SAT constraint programming solver
+- **httpx**: Fully featured HTTP client library for FastAPI testing
+- **python-multipart**: Streaming multipart parser for file and form data
 - **psycopg2-binary**: PostgreSQL database adapter for Python
-- **PostgreSQL**: Relational database for persistence and scheduling storage
 
 ## Frontend NPM Packages (Step 3b Viewer)
 - **react** (`^18.3.1`): Declarative UI library

@@ -161,3 +161,4 @@ export default function ExamsTab({ citData, scheduleData }) {
     </div>
   );
 }
+
