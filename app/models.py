@@ -178,3 +178,4 @@ def load_dataset(path: Union[str, Path]) -> Dataset:
         cancellations=raw.get("cancellations", []),
         exams=raw.get("exams", []),
     )
+

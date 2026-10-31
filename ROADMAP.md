@@ -56,7 +56,7 @@ Mark [x] when verified with validator.
 
 - [x] Step 1: repo skeleton, .gitignore, .env.example
 - [x] Step 2: models.py + load_dataset, validate.py wrapper around validator.py
-- [ ] Step 3: CP-SAT timetable, hard constraints only.
+- [x] Step 3: CP-SAT timetable, hard constraints only.
       Verify: validator shows 0 hard violations for sessions.
 - [ ] Step 4: add soft penalties to the objective, lower S1-S6 total.
 - [ ] Step 5: midsem exam scheduler (41 exams, half room capacity, an exam

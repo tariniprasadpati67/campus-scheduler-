@@ -65,3 +65,4 @@ def check_is_valid(report: Dict[str, Any], allow_e1: bool = False) -> bool:
 
 if __name__ == "__main__":
     validator.main()
+
