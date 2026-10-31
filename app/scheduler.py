@@ -14,7 +14,6 @@ def build_candidate_placements(dataset: Dataset) -> Dict[str, List[Tuple[str, in
     Filters out lunch crossings, lab start restrictions, unavailabilities,
     room type mismatches, capacity mismatches, and accessibility requirements.
     """
-    # Precompute unavailabilities
     fac_un: Dict[str, Set[Tuple[str, int]]] = defaultdict(set)
     for f in dataset.faculty:
         for u in f.unavailable:
@@ -36,7 +35,6 @@ def build_candidate_placements(dataset: Dataset) -> Dict[str, List[Tuple[str, in
         s_cands = []
         fixed = s.fixed_slot
 
-        # Valid candidate rooms
         eligible_rooms = []
         for r in dataset.rooms:
             if r.type not in s.room_types:
@@ -55,25 +53,20 @@ def build_candidate_placements(dataset: Dataset) -> Dict[str, List[Tuple[str, in
                 if fixed and fixed.get("start_period") != start:
                     continue
 
-                # Teaching periods check
                 periods = list(range(start, start + s.duration))
                 if not all(p in teaching_periods for p in periods):
                     continue
 
-                # Lunch crossing check: cannot have periods on both sides of lunch
                 if periods[0] <= lunch < periods[-1]:
                     continue
 
-                # Lab start period check
                 if s.kind == "lab" and start not in lab_starts:
                     continue
 
-                # Faculty availability
                 if any((day, p) in fac_un[s.faculty_id] for p in periods):
                     continue
 
                 for rid in eligible_rooms:
-                    # Room availability
                     if any((day, p) in room_un[rid] for p in periods):
                         continue
                     s_cands.append((day, start, rid))
@@ -85,14 +78,15 @@ def build_candidate_placements(dataset: Dataset) -> Dict[str, List[Tuple[str, in
 
 def solve_timetable(
     dataset: Dataset,
-    soft_weights: Optional[Dict[str, int]] = None,
+    optimize_soft: bool = False,
     time_limit_seconds: float = 30.0,
     hint_schedule: Optional[Dict[str, Tuple[str, int, str]]] = None,
+    disruption_penalty_weight: int = 100,
 ) -> Optional[Dict[str, Tuple[str, int, str]]]:
     """
     Solve the timetable using OR-Tools CP-SAT.
-    If soft_weights is provided (Step 4+), optimizes S1-S6 penalties.
-    If hint_schedule is provided (Step 8+), hints variables toward baseline.
+    If optimize_soft=True (Step 4+), minimizes S1-S6 soft penalties.
+    If hint_schedule is provided (Step 8+), minimizes moved sessions from baseline.
     Returns: mapping session_id -> (day, start_period, room_id).
     """
     model = cp_model.CpModel()
@@ -116,7 +110,6 @@ def solve_timetable(
         model.AddExactlyOne(vars_list)
 
     # 2. Elective Baskets (Hard constraint H11)
-    # All sessions in the same basket must have identical (day, start_period)
     baskets: Dict[str, List[Session]] = defaultdict(list)
     for s in dataset.sessions:
         if s.basket_slot:
@@ -126,7 +119,6 @@ def solve_timetable(
 
     for bname, bsessions in baskets.items():
         dur = bsessions[0].duration
-        # Find common timeslots (day, start) where all sessions in basket have at least one room
         common_timeslots: Set[Tuple[str, int]] = set()
         for cand in candidates[bsessions[0].id]:
             common_timeslots.add((cand[0], cand[1]))
@@ -140,7 +132,6 @@ def solve_timetable(
             basket_time_vars[(bname, day, start)] = y
             y_vars.append(y)
 
-            # Link each session's room choices at (day, start) to y
             for s in bsessions:
                 matching_x = [
                     x[(s.id, day, start, cand[2])]
@@ -152,7 +143,6 @@ def solve_timetable(
         model.AddExactlyOne(y_vars)
 
     # 3. Room non-overlap (Hard constraint H4)
-    # At any room r, day d, period p: at most 1 session
     room_period_map: Dict[Tuple[str, str, int], List[cp_model.IntVar]] = defaultdict(list)
     for (sid, day, start, rid), var in x.items():
         dur = dataset.sessions_by_id[sid].duration
@@ -164,7 +154,6 @@ def solve_timetable(
             model.Add(sum(vars_list) <= 1)
 
     # 4. Faculty non-overlap (Hard constraint H2)
-    # At any faculty f, day d, period p: at most 1 session
     fac_period_map: Dict[Tuple[str, str, int], List[cp_model.IntVar]] = defaultdict(list)
     for (sid, day, start, rid), var in x.items():
         fac_id = dataset.sessions_by_id[sid].faculty_id
@@ -177,7 +166,6 @@ def solve_timetable(
             model.Add(sum(vars_list) <= 1)
 
     # 5. Student Group non-overlap (Hard constraint H3)
-    # At any group g, day d, period p: at most 1 non-basket session, OR active basket
     group_period_nonbasket: Dict[Tuple[str, str, int], List[cp_model.IntVar]] = defaultdict(list)
     for (sid, day, start, rid), var in x.items():
         s = dataset.sessions_by_id[sid]
@@ -186,7 +174,6 @@ def solve_timetable(
                 for p in range(start, start + s.duration):
                     group_period_nonbasket[(g, day, p)].append(var)
 
-    # Map groups to baskets
     group_baskets: Dict[str, Set[str]] = defaultdict(set)
     for bname, bsessions in baskets.items():
         for s in bsessions:
@@ -196,12 +183,14 @@ def solve_timetable(
     all_days = dataset.days
     all_periods = dataset.teaching_periods
 
+    # Group period occupation indicator: group_occ_var[(g, day, p)]
+    group_occ_var: Dict[Tuple[str, str, int], cp_model.IntVar] = {}
+
     for g in dataset.groups_by_id:
         for day in all_days:
             for p in all_periods:
                 terms: List[cp_model.IntVar] = list(group_period_nonbasket.get((g, day, p), []))
 
-                # Add basket terms if group attends basket
                 for bname in group_baskets.get(g, []):
                     b_dur = baskets[bname][0].duration
                     for start in range(max(1, p - b_dur + 1), p + 1):
@@ -210,6 +199,18 @@ def solve_timetable(
 
                 if len(terms) > 1:
                     model.Add(sum(terms) <= 1)
+
+                if optimize_soft:
+                    if len(terms) == 1:
+                        group_occ_var[(g, day, p)] = terms[0]
+                    elif len(terms) > 1:
+                        # sum is 0 or 1, so the sum itself acts as indicator
+                        g_var = model.NewBoolVar(f"occ_{g}_{day}_{p}")
+                        model.Add(g_var == sum(terms))
+                        group_occ_var[(g, day, p)] = g_var
+                    else:
+                        g_zero = model.NewConstant(0)
+                        group_occ_var[(g, day, p)] = g_zero
 
     # 6. Faculty daily limit (Hard constraint H12)
     for fac in dataset.faculty:
@@ -225,45 +226,54 @@ def solve_timetable(
             if day_terms:
                 model.Add(sum(day_terms) <= max_h)
 
-    # Add hint schedule if provided
+    # Soft penalties and/or disruption hints
+    objective_terms = []
+
+    # If hint schedule provided (e.g. for Step 8 Rescheduling)
     if hint_schedule:
         for sid, (day, start, rid) in hint_schedule.items():
-            if (sid, day, start, rid) in x:
-                model.AddHint(x[(sid, day, start, rid)], 1)
+            if sid in dataset.sessions_by_id:
+                # Add warm-start hint
+                if (sid, day, start, rid) in x:
+                    model.AddHint(x[(sid, day, start, rid)], 1)
 
-    # Soft constraints handling (Step 4+)
-    if soft_weights:
-        objective_terms = []
-        # S1: Faculty avoid preferences
-        # S5: Room under-utilization (<40% capacity)
-        # S6: Period 9 usage
+                # Penalize moving session from hint
+                same_var = x.get((sid, day, start, rid))
+                if same_var is not None:
+                    # Penalty if not placed in same (day, start, rid)
+                    moved = model.NewBoolVar(f"moved_{sid}")
+                    model.Add(moved == 1 - same_var)
+                    objective_terms.append(disruption_penalty_weight * moved)
+                else:
+                    # Cannot keep baseline placement, definitely moved
+                    pass
+
+    if optimize_soft:
+        # S1, S5, S6
         for (sid, day, start, rid), var in x.items():
             s = dataset.sessions_by_id[sid]
             r = dataset.rooms_by_id[rid]
             dur = s.duration
             per = list(range(start, start + dur))
 
-            # S1
+            # S1: Faculty avoid preferences (2 points per avoided hour)
             fac = dataset.faculty_by_id[s.faculty_id]
             s1_penalty = 0
             for pref in fac.preferences:
                 if pref.get("type") == "avoid" and day in pref.get("days", dataset.days):
                     s1_penalty += 2 * sum(1 for p in per if p in pref.get("periods", []))
-            if s1_penalty > 0 and soft_weights.get("S1", 0) > 0:
-                objective_terms.append(soft_weights["S1"] * s1_penalty * var)
+            if s1_penalty > 0:
+                objective_terms.append(s1_penalty * var)
 
-            # S5
+            # S5: Room under-utilization (<40% capacity = 1 point)
             if r.capacity > 0 and (s.size / r.capacity) < 0.4:
-                if soft_weights.get("S5", 0) > 0:
-                    objective_terms.append(soft_weights["S5"] * 1 * var)
+                objective_terms.append(1 * var)
 
-            # S6
+            # S6: Period 9 usage = 1 point
             if 9 in per:
-                if soft_weights.get("S6", 0) > 0:
-                    objective_terms.append(soft_weights["S6"] * 1 * var)
+                objective_terms.append(1 * var)
 
-        # S4: Group same course lecture >1 in a day
-        # For each group g, course c, day d: count lectures
+        # S4: Group same course lecture twice in a day = 3 * (count - 1)
         course_group_lectures: Dict[Tuple[str, str, str], List[cp_model.IntVar]] = defaultdict(list)
         for (sid, day, start, rid), var in x.items():
             s = dataset.sessions_by_id[sid]
@@ -272,16 +282,20 @@ def solve_timetable(
                     course_group_lectures[(g, s.course_id, day)].append(var)
 
         for (g, cid, day), lvars in course_group_lectures.items():
-            if len(lvars) > 1 and soft_weights.get("S4", 0) > 0:
-                # penalty is 3 * (count - 1) if count > 1
-                excess = model.NewIntVar(0, len(lvars), f"excess_s4_{g}_{cid}_{day}")
-                model.Add(excess >= sum(lvars) - 1)
-                objective_terms.append(soft_weights["S4"] * 3 * excess)
+            if len(lvars) > 1:
+                excess_s4 = model.NewIntVar(0, len(lvars), f"excess_s4_{g}_{cid}_{day}")
+                model.Add(excess_s4 >= sum(lvars) - 1)
+                objective_terms.append(3 * excess_s4)
 
-        # S3: Group hours > 6 in a day
+        # Basket lectures of same course twice in a day (S4)
+        for bname, bsessions in baskets.items():
+            for s in bsessions:
+                # Basket sessions for course c on day d
+                pass  # All basket sessions of a basket are at the same time, different courses
+
+        # S3: Group hours > 6 in a day = 3 * (hours - 6)
         for g in dataset.groups_by_id:
             for day in all_days:
-                # sum of durations for group on that day
                 g_day_durations = []
                 for (sid, d, start, rid), var in x.items():
                     if d == day:
@@ -289,20 +303,44 @@ def solve_timetable(
                         if g in s.groups:
                             if not s.basket_slot:
                                 g_day_durations.append(s.duration * var)
-                # Baskets duration
                 for bname in group_baskets.get(g, []):
                     b_dur = baskets[bname][0].duration
                     for (bn, d, start), y in basket_time_vars.items():
                         if bn == bname and d == day:
                             g_day_durations.append(b_dur * y)
 
-                if g_day_durations and soft_weights.get("S3", 0) > 0:
+                if g_day_durations:
                     excess_hours = model.NewIntVar(0, 9, f"excess_h_{g}_{day}")
                     model.Add(excess_hours >= sum(g_day_durations) - 6)
-                    objective_terms.append(soft_weights["S3"] * 3 * excess_hours)
+                    objective_terms.append(3 * excess_hours)
 
-        if objective_terms:
-            model.Minimize(sum(objective_terms))
+        # S2: Gaps between classes for student group on each day (1 point per gap hour)
+        for g in dataset.groups_by_id:
+            for day in all_days:
+                has_before: List[cp_model.IntVar] = [model.NewBoolVar(f"hb_{g}_{day}_{p}") for p in range(10)]
+                has_after: List[cp_model.IntVar] = [model.NewBoolVar(f"ha_{g}_{day}_{p}") for p in range(10)]
+
+                # has_before prefix max
+                model.Add(has_before[1] == group_occ_var[(g, day, 1)])
+                for p in range(2, 10):
+                    model.AddMaxEquality(has_before[p], [has_before[p - 1], group_occ_var[(g, day, p)]])
+
+                # has_after suffix max
+                model.Add(has_after[9] == group_occ_var[(g, day, 9)])
+                for p in range(8, 0, -1):
+                    model.AddMaxEquality(has_after[p], [has_after[p + 1], group_occ_var[(g, day, p)]])
+
+                # is_gap for p in 2..8
+                for p in range(2, 9):
+                    is_gap = model.NewBoolVar(f"gap_{g}_{day}_{p}")
+                    model.Add(is_gap >= has_before[p - 1] + has_after[p + 1] - group_occ_var[(g, day, p)] - 1)
+                    model.Add(is_gap <= has_before[p - 1])
+                    model.Add(is_gap <= has_after[p + 1])
+                    model.Add(is_gap <= 1 - group_occ_var[(g, day, p)])
+                    objective_terms.append(1 * is_gap)
+
+    if objective_terms:
+        model.Minimize(sum(objective_terms))
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit_seconds
@@ -318,4 +356,3 @@ def solve_timetable(
     else:
         print(f"Solver ended with status: {solver.StatusName(status)}")
         return None
-
