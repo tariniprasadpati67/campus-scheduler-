@@ -66,11 +66,11 @@ Mark [x] when verified with validator.
       cancellations, approve/reject/alternative with a reason each, session
       overrides only for approved institute events. Verify: booking score,
       0 priority inversions.
-- [ ] Step 8: reschedule engine: apply disruption file, minimise moved
+- [x] Step 8: reschedule engine: apply disruption file, minimise moved
       sessions (use old schedule as hint), show diff, apply only after Admin
       approval, explain conflicting constraints if infeasible.
       Verify: validator --disruption --baseline.
-- [ ] Step 9: export exports/schedule_after.json via the app.
+- [x] Step 9: export exports/schedule_after.json via the app.
 - [ ] Step 10: FastAPI backend, auth with 4 roles (admin, department
       coordinator, faculty, club), permissions, approval flow, reset-demo
       button for Admin, dataset upload.
