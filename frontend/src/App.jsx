@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import LandingPage from './components/LandingPage.jsx';
+import CommandCenterDashboard from './components/CommandCenterDashboard.jsx';
 import DashboardTab from './components/DashboardTab.jsx';
 import TimetableTab from './components/TimetableTab.jsx';
 import ExamsTab from './components/ExamsTab.jsx';
@@ -12,7 +13,7 @@ function MainApp() {
   const { currentUser, quickLogin, demoAccounts, logout } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
-  const [activeTab, setActiveTab] = useState('landing');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [citData, setCitData] = useState(null);
   const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -109,6 +110,18 @@ function MainApp() {
     return (
       <LandingPage
         onLaunchConsole={(targetTab) => setActiveTab(targetTab || 'dashboard')}
+      />
+    );
+  }
+
+  if (activeTab === 'dashboard') {
+    return (
+      <CommandCenterDashboard
+        citData={citData}
+        scheduleData={scheduleData}
+        onScheduleChanged={loadDatasetData}
+        onNavigateToLanding={() => setActiveTab('landing')}
+        onNavigateToTab={(tab) => setActiveTab(tab)}
       />
     );
   }
