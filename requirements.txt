@@ -2,6 +2,7 @@ ortools
 fastapi
 uvicorn
 psycopg2-binary
+psycopg[binary]
 sqlalchemy
 python-dotenv
 pyjwt

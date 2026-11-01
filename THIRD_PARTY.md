@@ -15,6 +15,7 @@ This document tracks all third-party libraries and tools used across the CIT Cam
 - **httpx**: Fully featured HTTP client library for FastAPI testing
 - **python-multipart**: Streaming multipart parser for file and form data
 - **psycopg2-binary**: PostgreSQL database adapter for Python
+- **psycopg[binary]**: Modern PostgreSQL 3 database adapter for Python and SQLAlchemy 2.0+
 
 ## Frontend NPM Packages (Step 3b Viewer)
 - **react** (`^18.3.1`): Declarative UI library
