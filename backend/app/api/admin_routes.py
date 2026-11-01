@@ -180,3 +180,64 @@ def get_audit_logs(
         for l in logs
     ]
     return {"total": len(results), "audit_logs": results}
+
+
+class PriorityOrderUpdateInput(BaseModel):
+    priority_order: List[str]
+    reason: Optional[str] = "Dean's office priority order update"
+
+
+@router.get("/admin/priority-order")
+def get_priority_order(
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve current venue allocation priority order."""
+    if DATA_PATH.exists():
+        with open(DATA_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return {"priority_order": data.get("priority_order", [])}
+    return {
+        "priority_order": [
+            "exam",
+            "regular_session",
+            "institute_event",
+            "guest_lecture",
+            "department_event",
+            "club_event",
+        ]
+    }
+
+
+@router.put("/admin/priority-order")
+def update_priority_order(
+    req: PriorityOrderUpdateInput,
+    current_user: User = Depends(require_roles(["admin"])),
+    db: Session = Depends(get_db),
+):
+    """Admin (Dean's office) updates the room conflict priority order."""
+    if not DATA_PATH.exists():
+        raise HTTPException(status_code=404, detail="Dataset file not found.")
+
+    with open(DATA_PATH, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    old_order = data.get("priority_order", [])
+    data["priority_order"] = req.priority_order
+
+    with open(DATA_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+    audit = AuditLog(
+        actor=current_user.email,
+        action="UPDATE_PRIORITY_ORDER",
+        detail="Priority Order Updated",
+        reason=f"Priority order changed by {current_user.email}. Old: {old_order} -> New: {req.priority_order}. Justification: {req.reason}",
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Priority order updated successfully by Dean's Office.",
+        "priority_order": req.priority_order,
+    }

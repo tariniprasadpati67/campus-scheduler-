@@ -88,84 +88,204 @@ export default function OverviewHero({ citData, scheduleData, onNavigate, onOpen
         </div>
       </div>
 
-      {/* Active Session & Campus Role Permissions Banner */}
-      <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* Section 4: Roles & Conflict Priority Matrix */}
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>🛡️</span> Active Campus Session & Role Privileges
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Authenticated via Supabase PostgreSQL & JWT Security Gate
+            <div className="flex items-center gap-2">
+              <span className="text-xl">⚖️</span>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                4. Roles & Priority Hierarchy
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Strict campus governance rules, role separation, and room allocation priority ordering
             </p>
           </div>
 
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 self-start sm:self-auto flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            Session Active: <strong>{currentUser?.name || 'User'}</strong> ({currentUser?.role?.toUpperCase()})
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Active Role: <strong>{currentUser?.name || 'User'}</strong> ({currentUser?.role?.toUpperCase()})
+            </span>
+          </div>
         </div>
 
-        {/* Dynamic Permissions based on Logged-In Role */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/40">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-base">👑</span>
-              <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Admin Authority</span>
-              {currentUser?.role === 'admin' && (
-                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-500 text-white ml-auto">
-                  YOUR ROLE
-                </span>
-              )}
+        {/* Golden Invariant Rule Alert */}
+        <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center gap-3">
+          <span className="text-xl">🔒</span>
+          <div className="text-xs">
+            <p className="font-bold text-amber-900 dark:text-amber-200">
+              Core Security Invariant: Nobody can approve their own request.
+            </p>
+            <p className="text-amber-700 dark:text-amber-300 text-[11px] mt-0.5">
+              Enforced at the database & API level. Requests submitted by Admin, Coordinator, or Faculty cannot be self-approved.
+            </p>
+          </div>
+        </div>
+
+        {/* 4 Roles Table / Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Admin */}
+          <div className={`p-4 rounded-2xl border transition-all ${
+            currentUser?.role === 'admin'
+              ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-400 dark:border-amber-700 shadow-sm ring-1 ring-amber-400'
+              : 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">👑</span>
+                <span className="font-bold text-xs text-slate-900 dark:text-white">Admin</span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                Dean's Office
+              </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              Full campus oversight: approve/reject timetable proposals, export official data, trigger solver resets, view security audit logs.
+            {currentUser?.role === 'admin' && (
+              <span className="inline-block text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-500 text-white mb-2 uppercase tracking-wide">
+                YOUR ACTIVE ROLE
+              </span>
+            )}
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+              <strong>Everything:</strong> Generates the timetable, approves timetable changes and any booking that moves a class, can change the priority order.
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/40">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-base">📋</span>
-              <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Dept. Coordinator</span>
-              {currentUser?.role === 'coordinator' && (
-                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-blue-500 text-white ml-auto">
-                  YOUR ROLE
-                </span>
-              )}
+          {/* Department Coordinator */}
+          <div className={`p-4 rounded-2xl border transition-all ${
+            currentUser?.role === 'coordinator'
+              ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-400 dark:border-blue-700 shadow-sm ring-1 ring-blue-400'
+              : 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📋</span>
+                <span className="font-bold text-xs text-slate-900 dark:text-white">Dept. Coordinator</span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                CSE Dept
+              </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              Academic operations: propose session reschedules, request departmental lab & lecture rooms, inspect conflicts.
+            {currentUser?.role === 'coordinator' && (
+              <span className="inline-block text-[9px] font-black px-1.5 py-0.2 rounded bg-blue-500 text-white mb-2 uppercase tracking-wide">
+                YOUR ACTIVE ROLE
+              </span>
+            )}
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+              Requests changes to their department's sessions, books rooms for department events, approves bookings of their department's labs.
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/40">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-base">👨‍🏫</span>
-              <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Faculty Member</span>
-              {currentUser?.role === 'faculty' && (
-                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-500 text-white ml-auto">
-                  YOUR ROLE
-                </span>
-              )}
+          {/* Faculty */}
+          <div className={`p-4 rounded-2xl border transition-all ${
+            currentUser?.role === 'faculty'
+              ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-400 dark:border-emerald-700 shadow-sm ring-1 ring-emerald-400'
+              : 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">👨‍🏫</span>
+                <span className="font-bold text-xs text-slate-900 dark:text-white">Faculty</span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                Prof. Sharma
+              </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              Teaching schedule: personal weekly timetable view, mark unavailability or leave, verify classroom allocations.
+            {currentUser?.role === 'faculty' && (
+              <span className="inline-block text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-500 text-white mb-2 uppercase tracking-wide">
+                YOUR ACTIVE ROLE
+              </span>
+            )}
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+              Views their own timetable, marks unavailability, requests extra or moved sessions.
             </p>
           </div>
 
-          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/40">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-base">🎭</span>
-              <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Club Representative</span>
-              {currentUser?.role === 'club' && (
-                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-500 text-white ml-auto">
-                  YOUR ROLE
-                </span>
-              )}
+          {/* Club Representative */}
+          <div className={`p-4 rounded-2xl border transition-all ${
+            currentUser?.role === 'club'
+              ? 'bg-purple-50/70 dark:bg-purple-950/30 border-purple-400 dark:border-purple-700 shadow-sm ring-1 ring-purple-400'
+              : 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🎭</span>
+                <span className="font-bold text-xs text-slate-900 dark:text-white">Club Representative</span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                Robotics Club
+              </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              Campus fest activities: submit Spectra venue requests for auditoriums & halls, track approvals in real time.
+            {currentUser?.role === 'club' && (
+              <span className="inline-block text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-500 text-white mb-2 uppercase tracking-wide">
+                YOUR ACTIVE ROLE
+              </span>
+            )}
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+              Submits and cancels venue requests, and sees the status and reason for each.
             </p>
+          </div>
+        </div>
+
+        {/* Priority Order When Two Requests Want Same Room at Same Time */}
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-700/70 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-wider">
+              <span>🎯</span> Room Allocation Priority Order
+            </h4>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              When two requests want the same room at the same time, this order decides who gets it:
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <div className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 text-center">
+              <span className="inline-block w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold leading-5">
+                1
+              </span>
+              <p className="font-bold text-xs text-indigo-950 dark:text-indigo-200 mt-1">Exams</p>
+              <p className="text-[10px] text-indigo-700 dark:text-indigo-400">Top Priority</p>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-center">
+              <span className="inline-block w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold leading-5">
+                2
+              </span>
+              <p className="font-bold text-xs text-blue-950 dark:text-blue-200 mt-1">Regular Classes</p>
+              <p className="text-[10px] text-blue-700 dark:text-blue-400">Fixed Timetable</p>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-center">
+              <span className="inline-block w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold leading-5">
+                3
+              </span>
+              <p className="font-bold text-xs text-emerald-950 dark:text-emerald-200 mt-1">Institute Events</p>
+              <p className="text-[10px] text-emerald-700 dark:text-emerald-400">Spectra / Convocation</p>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-center">
+              <span className="inline-block w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold leading-5">
+                4
+              </span>
+              <p className="font-bold text-xs text-amber-950 dark:text-amber-200 mt-1">Guest Lectures</p>
+              <p className="text-[10px] text-amber-700 dark:text-amber-400">External Speakers</p>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-orange-50/70 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 text-center">
+              <span className="inline-block w-5 h-5 rounded-full bg-orange-600 text-white text-[10px] font-bold leading-5">
+                5
+              </span>
+              <p className="font-bold text-xs text-orange-950 dark:text-orange-200 mt-1">Department Events</p>
+              <p className="text-[10px] text-orange-700 dark:text-orange-400">Seminars / Workshops</p>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-center">
+              <span className="inline-block w-5 h-5 rounded-full bg-purple-600 text-white text-[10px] font-bold leading-5">
+                6
+              </span>
+              <p className="font-bold text-xs text-purple-950 dark:text-purple-200 mt-1">Club Events</p>
+              <p className="text-[10px] text-purple-700 dark:text-purple-400">Student Activities</p>
+            </div>
           </div>
         </div>
       </div>
