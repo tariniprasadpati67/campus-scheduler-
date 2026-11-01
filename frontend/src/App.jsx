@@ -1,29 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
-import LandingPage from './components/LandingPage.jsx';
-import CommandCenterDashboard from './components/CommandCenterDashboard.jsx';
+import OverviewHero from './components/OverviewHero.jsx';
 import DashboardTab from './components/DashboardTab.jsx';
 import TimetableTab from './components/TimetableTab.jsx';
 import ExamsTab from './components/ExamsTab.jsx';
 import BookingsTab from './components/BookingsTab.jsx';
 import AuditLogModal from './components/AuditLogModal.jsx';
+import BookingFormModal from './components/BookingFormModal.jsx';
+import ProposeChangeModal from './components/ProposeChangeModal.jsx';
 import { api } from './services/api.js';
 
 function MainApp() {
   const { currentUser, quickLogin, demoAccounts, logout } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'dashboard' | 'timetable' | 'bookings' | 'exams'
   const [citData, setCitData] = useState(null);
   const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Admin action modals & notifications
+  // Global modals
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isProposeModalOpen, setIsProposeModalOpen] = useState(false);
   const [resettingDemo, setResettingDemo] = useState(false);
   const [appBanner, setAppBanner] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('cit_theme') === 'dark';
+  });
+
+  // Sync theme
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('cit_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('cit_theme', 'light');
+    }
+  }, [isDarkMode]);
 
   // Load foundational data (cit_public.json and schedule.json)
   const loadDatasetData = async () => {
@@ -106,45 +123,37 @@ function MainApp() {
     }
   };
 
-  if (activeTab === 'landing') {
-    return (
-      <LandingPage
-        onLaunchConsole={(targetTab) => setActiveTab(targetTab || 'dashboard')}
-      />
-    );
-  }
-
-  if (activeTab === 'dashboard') {
-    return (
-      <CommandCenterDashboard
-        citData={citData}
-        scheduleData={scheduleData}
-        onScheduleChanged={loadDatasetData}
-        onNavigateToLanding={() => setActiveTab('landing')}
-        onNavigateToTab={(tab) => setActiveTab(tab)}
-      />
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors">
       {/* Top Header */}
-      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 shadow-sm">
+      <header className="bg-white/95 dark:bg-slate-800/95 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 backdrop-blur-md shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-3.5 gap-4">
+          <div className="flex items-center justify-between py-3 gap-4">
             {/* Title & Dataset Badge */}
             <div className="flex items-center gap-3">
-              <span className="text-2xl sm:text-3xl select-none">🏛️</span>
+              <span
+                onClick={() => setActiveTab('overview')}
+                className="text-2xl sm:text-3xl select-none cursor-pointer hover:scale-105 transition-transform"
+              >
+                🏛️
+              </span>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                    CIT Campus Scheduling Platform
+                  <h1
+                    onClick={() => setActiveTab('overview')}
+                    className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+                  >
+                    CIT Campus Scheduler
                   </h1>
                   {citData && (
                     <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300">
                       {citData.dataset_id}
                     </span>
                   )}
+                  <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    0 Violations
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Chilika Institute of Technology • Automated Scheduling & Conflict Resolution
@@ -175,6 +184,16 @@ function MainApp() {
                   );
                 })}
               </div>
+
+              {/* Theme Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                title="Toggle Theme"
+                className="p-2 rounded-xl text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200"
+              >
+                {isDarkMode ? '☀️' : '🌙'}
+              </button>
 
               {/* Admin Action Menu */}
               {isAdmin && (
@@ -207,6 +226,14 @@ function MainApp() {
 
             {/* Mobile Hamburger Button */}
             <div className="flex lg:hidden items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                title="Toggle Theme"
+                className="p-2 rounded-xl text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+              >
+                {isDarkMode ? '☀️' : '🌙'}
+              </button>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
@@ -280,10 +307,14 @@ function MainApp() {
           {/* Primary Navigation Tabs */}
           <div className="flex items-center space-x-1 sm:space-x-2 border-t border-slate-100 dark:border-slate-700/60 pt-2 pb-1 overflow-x-auto">
             <button
-              onClick={() => setActiveTab('landing')}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold rounded-xl transition whitespace-nowrap text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 cursor-pointer"
+              onClick={() => setActiveTab('overview')}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl transition whitespace-nowrap ${
+                activeTab === 'overview'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
             >
-              <span>🌐 Overview</span>
+              <span>🌟 Overview</span>
             </button>
 
             <button
@@ -294,7 +325,7 @@ function MainApp() {
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
-              <span>📊 Dashboard</span>
+              <span>📊 Operations Dashboard</span>
             </button>
 
             <button
@@ -381,6 +412,16 @@ function MainApp() {
 
         {!loading && !error && citData && scheduleData && (
           <>
+            {activeTab === 'overview' && (
+              <OverviewHero
+                citData={citData}
+                scheduleData={scheduleData}
+                onNavigate={(tab) => setActiveTab(tab)}
+                onOpenBookingModal={() => setIsBookingModalOpen(true)}
+                onOpenProposeModal={() => setIsProposeModalOpen(true)}
+              />
+            )}
+
             {activeTab === 'dashboard' && (
               <DashboardTab
                 citData={citData}
@@ -413,7 +454,7 @@ function MainApp() {
         )}
       </main>
 
-      {/* Audit Log Modal */}
+      {/* Global Modals */}
       {isAuditModalOpen && (
         <AuditLogModal
           isOpen={isAuditModalOpen}
@@ -421,9 +462,38 @@ function MainApp() {
         />
       )}
 
+      {isBookingModalOpen && (
+        <BookingFormModal
+          isOpen={isBookingModalOpen}
+          onClose={() => setIsBookingModalOpen(false)}
+          rooms={citData?.rooms || []}
+          onBookingCreated={() => {
+            loadDatasetData();
+            setActiveTab('bookings');
+          }}
+        />
+      )}
+
+      {isProposeModalOpen && (
+        <ProposeChangeModal
+          isOpen={isProposeModalOpen}
+          onClose={() => setIsProposeModalOpen(false)}
+          citData={citData}
+          onProposalCreated={() => {
+            loadDatasetData();
+            setActiveTab('dashboard');
+          }}
+        />
+      )}
+
       {/* Footer */}
-      <footer className="bg-white dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 py-4 text-center text-xs text-slate-400">
-        CIT Campus Scheduling Platform • Step 12 React UI
+      <footer className="bg-white dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 py-6 text-center text-xs text-slate-400 space-y-1">
+        <p className="font-semibold text-slate-600 dark:text-slate-300">
+          CIT Campus Timetabling & Venue Scheduling Platform
+        </p>
+        <p>
+          Chilika Institute of Technology • Powered by Google OR-Tools CP-SAT & Groq AI
+        </p>
       </footer>
     </div>
   );
