@@ -30,7 +30,7 @@ function MainApp() {
   const [appBanner, setAppBanner] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('cit_theme') === 'dark';
+    return localStorage.getItem('cit_theme') !== 'light';
   });
 
   // Sync theme
