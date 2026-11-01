@@ -212,6 +212,9 @@ function MainApp() {
                       }`}
                     >
                       {currentUser.role}
+                      {currentUser.department && currentUser.role === 'coordinator' ? ` • ${currentUser.department}` : ''}
+                      {currentUser.faculty_id && currentUser.role === 'faculty' ? ` • ${currentUser.faculty_id}` : ''}
+                      {currentUser.club_name && currentUser.role === 'club' ? ` • ${currentUser.club_name}` : ''}
                     </span>
                   </div>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
