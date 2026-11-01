@@ -219,8 +219,21 @@ export default function LoginPage({ onLoginSuccess, isModal = false, onClose }) 
 
   // Full Screen Standalone View
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 relative overflow-hidden">
+      {/* Decorative background glow */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
       {content}
+
+      <div className="mt-6 text-center text-xs text-slate-400 space-y-1 select-none">
+        <p className="font-semibold text-slate-300">
+          Chilika Institute of Technology • Campus Scheduling Portal
+        </p>
+        <p className="text-[11px] text-slate-500">
+          🔒 Secure Access Gate • Connected to Supabase Cloud PostgreSQL
+        </p>
+      </div>
     </div>
   );
 }
+

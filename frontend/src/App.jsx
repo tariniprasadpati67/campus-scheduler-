@@ -12,7 +12,7 @@ import LoginPage from './components/LoginPage.jsx';
 import { api } from './services/api.js';
 
 function MainApp() {
-  const { currentUser, quickLogin, demoAccounts, logout } = useAuth();
+  const { currentUser, quickLogin, demoAccounts, logout, authInitializing } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'dashboard' | 'timetable' | 'bookings' | 'exams'
@@ -125,7 +125,21 @@ function MainApp() {
     }
   };
 
-  // If user is logged out, present full-page login
+  // While verifying saved session, show brief clean loader
+  if (authInitializing) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-slate-100">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase">
+            Initializing CIT Security Portal...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Strict Login Gate: If user is not authenticated, show full-page login screen. No app access allowed.
   if (!currentUser) {
     return <LoginPage onLoginSuccess={loadDatasetData} />;
   }

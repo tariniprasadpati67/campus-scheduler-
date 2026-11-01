@@ -71,29 +71,35 @@ export const DEMO_CREDENTIALS = {
 };
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(() => DEMO_CREDENTIALS.admin.user);
+  const [currentUser, setCurrentUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem('cit_auth_token'));
+  const [authInitializing, setAuthInitializing] = useState(true);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
 
-  // Load current user profile if token exists or initialize admin
+  // Initialize auth: verify saved session or start with login required
   useEffect(() => {
     async function initAuth() {
+      const isLoggedIn = sessionStorage.getItem('cit_logged_in') === 'true';
       const savedToken = localStorage.getItem('cit_auth_token');
-      if (savedToken) {
+
+      if (isLoggedIn && savedToken) {
         try {
           const user = await api.auth.me();
           setCurrentUser(user);
           setAuthError(null);
         } catch (err) {
-          console.warn('Saved token expired or invalid, switching to admin demo:', err.message);
+          console.warn('Saved token expired or invalid:', err.message);
           localStorage.removeItem('cit_auth_token');
+          sessionStorage.removeItem('cit_logged_in');
           setToken(null);
-          await quickLogin('admin');
+          setCurrentUser(null);
         }
       } else {
-        await quickLogin('admin');
+        // By default, require login on start so unauthenticated users cannot enter
+        setCurrentUser(null);
       }
+      setAuthInitializing(false);
     }
 
     initAuth();
@@ -105,6 +111,7 @@ export function AuthProvider({ children }) {
       const res = await api.auth.login(email, password);
       if (res?.access_token) {
         localStorage.setItem('cit_auth_token', res.access_token);
+        sessionStorage.setItem('cit_logged_in', 'true');
         setToken(res.access_token);
       }
       if (res?.user) {
@@ -120,8 +127,8 @@ export function AuthProvider({ children }) {
   const quickLogin = async (roleKey) => {
     const creds = DEMO_CREDENTIALS[roleKey];
     if (!creds) return;
-    // Set immediate state so UI button highlights and activates INSTANTLY on click with zero delay!
     setCurrentUser(creds.user);
+    sessionStorage.setItem('cit_logged_in', 'true');
     try {
       const res = await api.auth.login(creds.email, creds.password);
       if (res?.access_token) {
@@ -140,6 +147,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('cit_auth_token');
+    sessionStorage.removeItem('cit_logged_in');
     setToken(null);
     setCurrentUser(null);
   };
@@ -147,6 +155,7 @@ export function AuthProvider({ children }) {
   const value = {
     currentUser,
     token,
+    authInitializing,
     loading,
     authError,
     login,
