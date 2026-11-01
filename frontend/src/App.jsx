@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import LandingPage from './components/LandingPage.jsx';
 import DashboardTab from './components/DashboardTab.jsx';
 import TimetableTab from './components/TimetableTab.jsx';
 import ExamsTab from './components/ExamsTab.jsx';
@@ -11,7 +12,7 @@ function MainApp() {
   const { currentUser, quickLogin, demoAccounts, logout } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('landing');
   const [citData, setCitData] = useState(null);
   const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -103,6 +104,14 @@ function MainApp() {
       alert(`Export failed: ${err.message}`);
     }
   };
+
+  if (activeTab === 'landing') {
+    return (
+      <LandingPage
+        onLaunchConsole={(targetTab) => setActiveTab(targetTab || 'dashboard')}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors">
@@ -257,6 +266,13 @@ function MainApp() {
 
           {/* Primary Navigation Tabs */}
           <div className="flex items-center space-x-1 sm:space-x-2 border-t border-slate-100 dark:border-slate-700/60 pt-2 pb-1 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('landing')}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold rounded-xl transition whitespace-nowrap text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 cursor-pointer"
+            >
+              <span>🌐 Overview</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl transition whitespace-nowrap ${
