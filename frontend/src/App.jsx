@@ -8,6 +8,7 @@ import BookingsTab from './components/BookingsTab.jsx';
 import AuditLogModal from './components/AuditLogModal.jsx';
 import BookingFormModal from './components/BookingFormModal.jsx';
 import ProposeChangeModal from './components/ProposeChangeModal.jsx';
+import LoginPage from './components/LoginPage.jsx';
 import { api } from './services/api.js';
 
 function MainApp() {
@@ -21,6 +22,7 @@ function MainApp() {
   const [error, setError] = useState(null);
 
   // Global modals
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isProposeModalOpen, setIsProposeModalOpen] = useState(false);
@@ -123,6 +125,11 @@ function MainApp() {
     }
   };
 
+  // If user is logged out, present full-page login
+  if (!currentUser) {
+    return <LoginPage onLoginSuccess={loadDatasetData} />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors">
       {/* Top Header */}
@@ -194,6 +201,27 @@ function MainApp() {
               >
                 {isDarkMode ? '☀️' : '🌙'}
               </button>
+
+              {/* Account / Login & Logout */}
+              <div className="flex items-center gap-1.5 pl-1 border-l border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(true)}
+                  title="Sign In with custom credentials or switch account"
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1"
+                >
+                  <span>🔑</span>
+                  <span>Login</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  title="Sign Out"
+                  className="p-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                >
+                  🚪
+                </button>
+              </div>
 
               {/* Admin Action Menu */}
               {isAdmin && (
@@ -274,6 +302,32 @@ function MainApp() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Mobile Auth Bar */}
+              <div className="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLoginModalOpen(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex-1 py-2 rounded-xl text-xs bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800 flex items-center justify-center gap-1.5"
+                >
+                  <span>🔑</span>
+                  <span>Sign In</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-semibold border border-rose-200 dark:border-rose-900 flex items-center justify-center gap-1.5"
+                >
+                  <span>🚪</span>
+                  <span>Logout</span>
+                </button>
               </div>
 
               {isAdmin && (
@@ -455,6 +509,14 @@ function MainApp() {
       </main>
 
       {/* Global Modals */}
+      {isLoginModalOpen && (
+        <LoginPage
+          isModal={true}
+          onClose={() => setIsLoginModalOpen(false)}
+          onLoginSuccess={loadDatasetData}
+        />
+      )}
+
       {isAuditModalOpen && (
         <AuditLogModal
           isOpen={isAuditModalOpen}
