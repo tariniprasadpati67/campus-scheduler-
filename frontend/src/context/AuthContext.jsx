@@ -10,6 +10,15 @@ export const DEMO_CREDENTIALS = {
     label: 'Admin',
     icon: '👑',
     desc: 'Full campus access, approve changes, reset demo',
+    user: {
+      id: 1,
+      name: 'Admin User',
+      email: 'admin@cit.test',
+      role: 'admin',
+      department: 'ADMIN',
+      faculty_id: null,
+      club_name: null,
+    },
   },
   coordinator: {
     email: 'coordinator@cit.test',
@@ -17,6 +26,15 @@ export const DEMO_CREDENTIALS = {
     label: 'CSE Coordinator',
     icon: '📋',
     desc: 'Reschedule sessions & request dept rooms',
+    user: {
+      id: 2,
+      name: 'Department Coordinator',
+      email: 'coordinator@cit.test',
+      role: 'coordinator',
+      department: 'CSE',
+      faculty_id: null,
+      club_name: null,
+    },
   },
   faculty: {
     email: 'faculty@cit.test',
@@ -24,6 +42,15 @@ export const DEMO_CREDENTIALS = {
     label: 'Prof. Sharma (CSE)',
     icon: '👨‍🏫',
     desc: 'View personal timetable, mark leave/unavailability',
+    user: {
+      id: 3,
+      name: 'Prof. Sharma',
+      email: 'faculty@cit.test',
+      role: 'faculty',
+      department: 'CSE',
+      faculty_id: 'F01',
+      club_name: null,
+    },
   },
   club: {
     email: 'club@cit.test',
@@ -31,19 +58,27 @@ export const DEMO_CREDENTIALS = {
     label: 'Robotics Club Rep',
     icon: '🎭',
     desc: 'Submit & cancel venue booking requests',
+    user: {
+      id: 4,
+      name: 'Club Representative',
+      email: 'club@cit.test',
+      role: 'club',
+      department: 'CLUBS',
+      faculty_id: null,
+      club_name: 'Robotics Club',
+    },
   },
 };
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => DEMO_CREDENTIALS.admin.user);
   const [token, setToken] = useState(() => localStorage.getItem('cit_auth_token'));
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
 
-  // Load current user profile if token exists
+  // Load current user profile if token exists or initialize admin
   useEffect(() => {
     async function initAuth() {
-      setLoading(true);
       const savedToken = localStorage.getItem('cit_auth_token');
       if (savedToken) {
         try {
@@ -51,17 +86,14 @@ export function AuthProvider({ children }) {
           setCurrentUser(user);
           setAuthError(null);
         } catch (err) {
-          console.warn('Session expired or invalid token, defaulting to admin demo:', err.message);
+          console.warn('Saved token expired or invalid, switching to admin demo:', err.message);
           localStorage.removeItem('cit_auth_token');
           setToken(null);
-          // Auto login as admin for instant demo usability
           await quickLogin('admin');
         }
       } else {
-        // Auto login as admin demo for seamless initial evaluator experience
         await quickLogin('admin');
       }
-      setLoading(false);
     }
 
     initAuth();
@@ -69,28 +101,40 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      setLoading(true);
       setAuthError(null);
       const res = await api.auth.login(email, password);
-      localStorage.setItem('cit_auth_token', res.access_token);
-      setToken(res.access_token);
-      setCurrentUser(res.user);
-      return res.user;
+      if (res?.access_token) {
+        localStorage.setItem('cit_auth_token', res.access_token);
+        setToken(res.access_token);
+      }
+      if (res?.user) {
+        setCurrentUser(res.user);
+      }
+      return res?.user;
     } catch (err) {
       setAuthError(err.message || 'Login failed');
       throw err;
-    } finally {
-      setLoading(false);
     }
   };
 
   const quickLogin = async (roleKey) => {
     const creds = DEMO_CREDENTIALS[roleKey];
     if (!creds) return;
+    // Set immediate state so UI button highlights and activates INSTANTLY on click with zero delay!
+    setCurrentUser(creds.user);
     try {
-      return await login(creds.email, creds.password);
+      const res = await api.auth.login(creds.email, creds.password);
+      if (res?.access_token) {
+        localStorage.setItem('cit_auth_token', res.access_token);
+        setToken(res.access_token);
+      }
+      if (res?.user) {
+        setCurrentUser(res.user);
+      }
+      return res?.user || creds.user;
     } catch (err) {
-      console.error(`Quick login for ${roleKey} failed:`, err);
+      console.warn(`Backend login offline for ${roleKey}, using local session:`, err.message);
+      return creds.user;
     }
   };
 
@@ -121,4 +165,3 @@ export function useAuth() {
   }
   return context;
 }
-

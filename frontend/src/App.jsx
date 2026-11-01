@@ -138,15 +138,16 @@ function MainApp() {
                   return (
                     <button
                       key={key}
+                      type="button"
                       onClick={() => quickLogin(key)}
                       title={acc.desc}
-                      className={`px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5 ${
+                      className={`cursor-pointer select-none px-2.5 py-1.5 rounded-lg font-semibold transition-all duration-150 flex items-center gap-1.5 ${
                         isActive
-                          ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-750'
                       }`}
                     >
-                      <span>{acc.icon}</span>
+                      <span className="text-sm select-none">{acc.icon}</span>
                       <span>{acc.label}</span>
                     </button>
                   );
@@ -207,14 +208,15 @@ function MainApp() {
                     return (
                       <button
                         key={key}
+                        type="button"
                         onClick={() => {
                           quickLogin(key);
                           setMobileMenuOpen(false);
                         }}
-                        className={`p-2 rounded-xl text-xs font-semibold text-left flex items-center gap-2 ${
+                        className={`cursor-pointer select-none p-2.5 rounded-xl text-xs font-semibold text-left flex items-center gap-2 transition ${
                           isActive
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            ? 'bg-indigo-600 text-white shadow'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                         }`}
                       >
                         <span>{acc.icon}</span>

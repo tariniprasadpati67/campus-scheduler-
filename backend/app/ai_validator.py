@@ -197,3 +197,4 @@ def validate_ai_booking_payload(
     }
 
     return sanitized, warnings, follow_ups
+

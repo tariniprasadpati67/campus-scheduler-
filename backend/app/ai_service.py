@@ -303,3 +303,4 @@ def explain_decision(decision_type: str, item_data: Dict[str, Any]) -> str:
             return "This booking was cancelled by the requester."
 
     return f"Decision: {status}. Rationale: {reason}"
+
