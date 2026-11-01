@@ -12,7 +12,7 @@ import LoginPage from './components/LoginPage.jsx';
 import { api } from './services/api.js';
 
 function MainApp() {
-  const { currentUser, quickLogin, demoAccounts, logout, authInitializing } = useAuth();
+  const { currentUser, logout, authInitializing } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'dashboard' | 'timetable' | 'bookings' | 'exams'
@@ -182,75 +182,58 @@ function MainApp() {
               </div>
             </div>
 
-            {/* Role Switcher & User Profile (Desktop) */}
+            {/* Logged-In User Profile & Actions (Desktop) */}
             <div className="hidden lg:flex items-center gap-3">
-              <div className="flex items-center bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl text-xs">
-                {Object.entries(demoAccounts).map(([key, acc]) => {
-                  const isActive = currentUser?.email === acc.email;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => quickLogin(key)}
-                      title={acc.desc}
-                      className={`cursor-pointer select-none px-2.5 py-1.5 rounded-lg font-semibold transition-all duration-150 flex items-center gap-1.5 ${
-                        isActive
-                          ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-750'
+              {/* User Identity Card */}
+              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-xs shadow-sm">
+                <span className="text-lg select-none">
+                  {currentUser.role === 'admin'
+                    ? '👑'
+                    : currentUser.role === 'coordinator'
+                    ? '📋'
+                    : currentUser.role === 'faculty'
+                    ? '👨‍🏫'
+                    : '🎭'}
+                </span>
+                <div className="text-left">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      {currentUser.name || currentUser.email}
+                    </span>
+                    <span
+                      className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded tracking-wider ${
+                        currentUser.role === 'admin'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+                          : currentUser.role === 'coordinator'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+                          : currentUser.role === 'faculty'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                          : 'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 border border-purple-300 dark:border-purple-700'
                       }`}
                     >
-                      <span className="text-sm select-none">{acc.icon}</span>
-                      <span>{acc.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Theme Toggle Button */}
-              <button
-                type="button"
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                title="Toggle Theme"
-                className="p-2 rounded-xl text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200"
-              >
-                {isDarkMode ? '☀️' : '🌙'}
-              </button>
-
-              {/* Account / Login & Logout */}
-              <div className="flex items-center gap-1.5 pl-1 border-l border-slate-200 dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setIsLoginModalOpen(true)}
-                  title="Sign In with custom credentials or switch account"
-                  className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition flex items-center gap-1"
-                >
-                  <span>🔑</span>
-                  <span>Login</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={logout}
-                  title="Sign Out"
-                  className="p-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                >
-                  🚪
-                </button>
+                      {currentUser.role}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                    {currentUser.email}
+                  </span>
+                </div>
               </div>
 
               {/* Admin Action Menu */}
               {isAdmin && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setIsAuditModalOpen(true)}
                     title="View System Audit Trail"
-                    className="p-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200"
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition"
                   >
                     📜 Audit
                   </button>
                   <button
                     onClick={handleExportSchedule}
                     title="Export official schedule.json"
-                    className="p-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200"
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition"
                   >
                     💾 Export
                   </button>
@@ -258,12 +241,33 @@ function MainApp() {
                     onClick={handleResetDemo}
                     disabled={resettingDemo}
                     title="Reset all demo data"
-                    className="p-2 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300"
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 transition"
                   >
                     {resettingDemo ? '...' : '🔄 Reset'}
                   </button>
                 </div>
               )}
+
+              {/* Theme Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                title="Toggle Theme"
+                className="p-2 rounded-xl text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition"
+              >
+                {isDarkMode ? '☀️' : '🌙'}
+              </button>
+
+              {/* Sign Out Button */}
+              <button
+                type="button"
+                onClick={logout}
+                title="Sign Out of CIT Portal"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 transition flex items-center gap-1.5 shadow-sm"
+              >
+                <span>🚪</span>
+                <span>Sign Out</span>
+              </button>
             </div>
 
             {/* Mobile Hamburger Button */}
@@ -289,58 +293,37 @@ function MainApp() {
           {/* Mobile Drawer (Visible when hamburger clicked) */}
           {mobileMenuOpen && (
             <div className="lg:hidden border-t border-slate-200 dark:border-slate-700 py-3 space-y-3">
-              <div>
-                <p className="text-[11px] font-bold uppercase text-slate-400 mb-1.5">
-                  Switch Demo Persona:
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(demoAccounts).map(([key, acc]) => {
-                    const isActive = currentUser?.email === acc.email;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => {
-                          quickLogin(key);
-                          setMobileMenuOpen(false);
-                        }}
-                        className={`cursor-pointer select-none p-2.5 rounded-xl text-xs font-semibold text-left flex items-center gap-2 transition ${
-                          isActive
-                            ? 'bg-indigo-600 text-white shadow'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                        }`}
-                      >
-                        <span>{acc.icon}</span>
-                        <span>{acc.label}</span>
-                      </button>
-                    );
-                  })}
+              {/* Current User Card */}
+              <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">
+                    {currentUser.role === 'admin'
+                      ? '👑'
+                      : currentUser.role === 'coordinator'
+                      ? '📋'
+                      : currentUser.role === 'faculty'
+                      ? '👨‍🏫'
+                      : '🎭'}
+                  </span>
+                  <div>
+                    <p className="font-bold text-xs text-slate-900 dark:text-white">
+                      {currentUser.name || currentUser.email}
+                    </p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      {currentUser.email} • {currentUser.role?.toUpperCase()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Mobile Auth Bar */}
-              <div className="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsLoginModalOpen(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="flex-1 py-2 rounded-xl text-xs bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800 flex items-center justify-center gap-1.5"
-                >
-                  <span>🔑</span>
-                  <span>Sign In</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => {
                     logout();
                     setMobileMenuOpen(false);
                   }}
-                  className="px-4 py-2 rounded-xl text-xs bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 font-semibold border border-rose-200 dark:border-rose-900 flex items-center justify-center gap-1.5"
+                  className="px-3 py-1.5 rounded-xl text-xs bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-900 flex items-center gap-1"
                 >
                   <span>🚪</span>
-                  <span>Logout</span>
+                  <span>Sign Out</span>
                 </button>
               </div>
 

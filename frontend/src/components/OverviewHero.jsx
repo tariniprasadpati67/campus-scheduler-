@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function OverviewHero({ citData, scheduleData, onNavigate, onOpenBookingModal, onOpenProposeModal }) {
-  const { currentUser, quickLogin, demoAccounts } = useAuth();
+  const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
 
   return (
@@ -88,53 +88,85 @@ export default function OverviewHero({ citData, scheduleData, onNavigate, onOpen
         </div>
       </div>
 
-      {/* Persona Role Switcher Showcase Card */}
+      {/* Active Session & Campus Role Permissions Banner */}
       <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>🎭</span> Active Persona & Role-Based Permissions
+              <span>🛡️</span> Active Campus Session & Role Privileges
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Switch roles with one click to test distinct permissions across the platform
+              Authenticated via Supabase PostgreSQL & JWT Security Gate
             </p>
           </div>
 
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 self-start sm:self-auto">
-            Logged in as: <strong>{currentUser?.name || 'Admin'}</strong> ({currentUser?.role})
+          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 self-start sm:self-auto flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Session Active: <strong>{currentUser?.name || 'User'}</strong> ({currentUser?.role?.toUpperCase()})
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {Object.entries(demoAccounts).map(([key, acc]) => {
-            const isActive = currentUser?.email === acc.email;
-            return (
-              <div
-                key={key}
-                onClick={() => quickLogin(key)}
-                className={`cursor-pointer select-none p-3.5 rounded-xl border transition-all ${
-                  isActive
-                    ? 'bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-500 shadow-sm ring-2 ring-indigo-500/20'
-                    : 'bg-slate-50/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800/80'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{acc.icon}</span>
-                    <span className="font-bold text-xs text-slate-900 dark:text-white">{acc.label}</span>
-                  </div>
-                  {isActive && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-600 text-white">
-                      ACTIVE
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">
-                  {acc.desc}
-                </p>
-              </div>
-            );
-          })}
+        {/* Dynamic Permissions based on Logged-In Role */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/40">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-base">👑</span>
+              <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Admin Authority</span>
+              {currentUser?.role === 'admin' && (
+                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-500 text-white ml-auto">
+                  YOUR ROLE
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              Full campus oversight: approve/reject timetable proposals, export official data, trigger solver resets, view security audit logs.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/40">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-base">📋</span>
+              <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Dept. Coordinator</span>
+              {currentUser?.role === 'coordinator' && (
+                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-blue-500 text-white ml-auto">
+                  YOUR ROLE
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              Academic operations: propose session reschedules, request departmental lab & lecture rooms, inspect conflicts.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/40">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-base">👨‍🏫</span>
+              <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Faculty Member</span>
+              {currentUser?.role === 'faculty' && (
+                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-500 text-white ml-auto">
+                  YOUR ROLE
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              Teaching schedule: personal weekly timetable view, mark unavailability or leave, verify classroom allocations.
+            </p>
+          </div>
+
+          <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/40">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-base">🎭</span>
+              <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Club Representative</span>
+              {currentUser?.role === 'club' && (
+                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-500 text-white ml-auto">
+                  YOUR ROLE
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              Campus fest activities: submit Spectra venue requests for auditoriums & halls, track approvals in real time.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -247,3 +279,4 @@ export default function OverviewHero({ citData, scheduleData, onNavigate, onOpen
     </div>
   );
 }
+
